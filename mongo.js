@@ -1,7 +1,9 @@
 //Database
 const mongoose = require('mongoose');
-const password="azeqsdwxc"
-const uri =`mongodb+srv://juba:${password}@cluster0.dd0gg.mongodb.net/?retryWrites=true&w=majority`
+const uniqueValidator  =  require ( 'mongoose-unique-validator' )
+const password=process.env.DB_PASSWORD
+const username =process.env.DB_USER
+const uri =`mongodb+srv://${username}:${password}@cluster0.dd0gg.mongodb.net/?retryWrites=true&w=majority`
 
 mongoose
   .connect(uri)
@@ -9,9 +11,10 @@ mongoose
   .catch((err)=>console.error("erreur de connection:",err))
 
 const userSchema= new mongoose.Schema({
- email:String,
- password:String
+ email:{type:String,required:true,unique:true},
+ password:{type:String,required:true}
 })
+userSchema.plugin( uniqueValidator )
 
 const User= mongoose.model("User",userSchema)
 
