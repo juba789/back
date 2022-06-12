@@ -31,18 +31,29 @@ function getSauces(req,res){
 }
 
 function createSauce(req,res){
+    const body =req.body
+    const file=req.file
+    const fileName=file.fileName
+    console.log({file})
+    const sauce =JSON.parse(body.sauce)
+    function makeImage(req,fileName){
+        console.log("req protocol:" ,req.protocol + '://' + req.get('host')+"/images/"+fileName)
+      return  req.protocol + '://' + req.get('host')+"/images/"+fileName
+    }
+   const {name,manufacturer,description,mainPepper,heat,userId}=sauce
+    
 const product= new Product({
-    userId : "bim", 
-    name : "bim" ,
-    manufacturer:  "bim", 
-    description : "bim" ,
-    mainPepper : "bim" ,
-    imageUrl : "bim" ,
-    heat : 2 ,
-    likes : 2 ,
-    dislikes : 2 ,
-    usersLiked : [ "bim" ] ,
-    usersDisliked : [ "bim" ]
+    userId:userId,                 /*au lieu d'écrire userId=userId,je peux réduire à userId,pareil pour le reste*/
+    name:name,
+    manufacturer:manufacturer, 
+    description:description,
+    mainPepper:mainPepper ,
+    imageUrl:makeImage(req,fileName) ,
+    heat:heat,
+    likes : 0,
+    dislikes : 0 ,
+    usersLiked : [] ,
+    usersDisliked : []
 })
 
 product.save().then((res)=>console.log("produit enregistré",res)).catch(console.error)
