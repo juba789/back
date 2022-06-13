@@ -22,12 +22,10 @@ const Product= mongoose.model("Product",productSchema)
 
 
 function getSauces(req,res){
+    // Product.deleteMany({}).then(console.log).catch(console.error)
     console.log("le token validé bienvenue dans getSauces")
     console.log("le token est bon")
     Product.find({}).then(products=>res.send(products))
-    // res.send({message:[{sauce:"sauce1" },{sauce:"sauce2"}]})
-
-
 }
 
 function createSauce(req,res){
@@ -56,7 +54,10 @@ const product= new Product({
     usersDisliked : []
 })
 
-product.save().then((res)=>console.log("produit enregistré",res)).catch(console.error)
+product.save().then((message)=>{
+    res.status(201).send({message:message});
+    return console.log("produit enregistré", message)
+}).catch(console.error)
 }
 
 module.exports={getSauces,createSauce}
