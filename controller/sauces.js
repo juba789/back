@@ -1,6 +1,7 @@
 // const res = require("express/lib/response")
 
 const mongoose =require("mongoose")
+const unlink=require("fs").promises.unlink
 
 
 const productSchema= new mongoose.Schema({
@@ -25,8 +26,31 @@ function getSauces(req,res){
     // Product.deleteMany({}).then(console.log).catch(console.error)
     console.log("le token validé bienvenue dans getSauces")
     console.log("le token est bon")
-    Product.find({}).then(products=>res.send(products))
+    Product.find({}).then(products=>res.send(products)).catch(error=>res.status(500).send(error))
 }
+
+
+function getSauceById(req,res){
+    const id= req.params.id 
+    Product.findById(id)
+       .then((product)=>res.send(product))
+       .catch(error=>res.status(500).send(error))
+ }
+
+ function deleteSauce(req,res){
+    const id= req.params.id 
+    Product.findByIdAndDelete(id)
+    .then(deleteImage)
+    .then((product)=>res.send({ message: product }))
+    .catch((err)=>res.status(500).send({message:err}))
+ }
+
+ function deleteImage(product){
+const imageUrl =product.imageUrl
+const fileToDelete =imageUrl.split("/").at(-1)
+ return unlink(`images/${fileToDelete}`).then(()=>product)
+
+ }
 
 function createSauce(req,res){
     const body =req.body
@@ -60,4 +84,4 @@ product.save().then((message)=>{
 }).catch(console.error)
 }
 
-module.exports={getSauces,createSauce}
+module.exports={getSauces,createSauce,getSauceById,deleteSauce}
