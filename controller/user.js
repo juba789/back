@@ -20,7 +20,7 @@ function hashpassword(password){
    return bcrypt.hash(password,saltRounds)
   }
 
-async function logUser(req,res){
+async function loginUser(req,res){
  try{    
 const email =req.body.email
 const password=req.body.password
@@ -48,4 +48,4 @@ return token
 
 }
 
-  module.exports={createUser,logUser}
+  module.exports={createUser,loginUser}

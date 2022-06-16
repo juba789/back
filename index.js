@@ -1,25 +1,24 @@
 const {app,express}=require("./server")
+const {sauceRouter}=require("./routers/sauces.router")
+const { authRouter } = require("./routers/auth.router")
 const path =require("path")
+const bodyParser = require("body-parser")
 const port = 3000
 
 //Connection à la Database
 require("./mongo")
 
 //Controllers
-const {createUser,logUser} =require("./controller/user")
-const {getSauces,createSauce,getSauceById,deleteSauce}= require("./controller/sauces")
+
+
 
 //middleware
-const {upload}=require("./middleware/multer")
-const {authenticateUser}=require("./middleware/auth")
-
+app.use("/api/sauces",sauceRouter)
+app.use("/api/auth",authRouter)
+app.use(bodyParser.json())
 //Route
-app.post("/api/auth/signup", createUser)
-app.post("/api/auth/login",logUser)
-app.get("/api/sauces",authenticateUser, getSauces)
-app.post("/api/sauces",authenticateUser,upload.single("image"), createSauce)
-app.get("/api/sauces/:id",authenticateUser,getSauceById)
-app.delete("/api/sauces/:id",authenticateUser,deleteSauce)
+
+
 app.get('/', (req, res) => {
 res.send('Hello World!')
 })
