@@ -1,87 +1,126 @@
-// const res = require("express/lib/response")
-
-const mongoose =require("mongoose")
-const unlink=require("fs").promises.unlink
+const mongoose = require("mongoose")
+const { unlink } = require("fs/promises")
 
 
-const productSchema= new mongoose.Schema({
-    userId : String, 
-    name : String ,
-    manufacturer:  String, 
-    description : String ,
-    mainPepper : String ,
-    imageUrl : String ,
-    heat : Number ,
-    likes : Number ,
-    dislikes : Number ,
-    usersLiked : [String] ,
-    usersDisliked : [ String ]
+const productSchema = new mongoose.Schema({
+  userId: String,
+  name: String,
+  manufacturer: String,
+  description: String,
+  mainPepper: String,
+  imageUrl: String,
+  heat: { type: Number, min: 1, max: 5 },
+  likes: Number,
+  dislikes: Number,
+  usersLiked: [String],
+  usersDisliked: [String]
 })
+const Product = mongoose.model("Product", productSchema)
 
-const Product= mongoose.model("Product",productSchema)
-
-
-
-function getSauces(req,res){
-    // Product.deleteMany({}).then(console.log).catch(console.error)
-    console.log("le token validé bienvenue dans getSauces")
-    console.log("le token est bon")
-    Product.find({}).then(products=>res.send(products)).catch(error=>res.status(500).send(error))
+function retrieveSauces(req, res) {
+  Product.find({})
+    .then((products) => res.send(products))
+    .catch((error) => res.status(500).send(error))
 }
 
-
-function getSauceById(req,res){
-    const id= req.params.id 
-    Product.findById(id)
-       .then((product)=>res.send(product))
-       .catch(error=>res.status(500).send(error))
- }
-
- function deleteSauce(req,res){
-    const id= req.params.id 
-    Product.findByIdAndDelete(id)
-    .then(deleteImage)
-    .then((product)=>res.send({ message: product }))
-    .catch((err)=>res.status(500).send({message:err}))
- }
-
- function deleteImage(product){
-const imageUrl =product.imageUrl
-const fileToDelete =imageUrl.split("/").at(-1)
- return unlink(`images/${fileToDelete}`).then(()=>product)
-
- }
-
-function createSauce(req,res){
-    const body =req.body
-    const file=req.file
-    const fileName=file.fileName
-    console.log({file})
-    const sauce =JSON.parse(body.sauce)
-    function makeImage(req,fileName){
-        console.log("req protocol:" ,req.protocol + '://' + req.get('host')+"/images/"+fileName)
-      return  req.protocol + '://' + req.get('host')+"/images/"+fileName
-    }
-   const {name,manufacturer,description,mainPepper,heat,userId}=sauce
-    
-const product= new Product({
-    userId:userId,                 /*au lieu d'écrire userId=userId,je peux réduire à userId,pareil pour le reste*/
-    name:name,
-    manufacturer:manufacturer, 
-    description:description,
-    mainPepper:mainPepper ,
-    imageUrl:makeImage(req,fileName) ,
-    heat:heat,
-    likes : 0,
-    dislikes : 0 ,
-    usersLiked : [] ,
-    usersDisliked : []
-})
-
-product.save().then((message)=>{
-    res.status(201).send({message:message});
-    return console.log("produit enregistré", message)
-}).catch(console.error)
+function retrieveSauce(req, res) {
+  const { id } = req.params
+  return Product.findById(id)
 }
 
-module.exports={getSauces,createSauce,getSauceById,deleteSauce}
+function retrieveSauceById(req, res) {
+  retrieveSauce(req, res)
+    .then((product) => sendCliResponse(product, res))
+    .catch((err) => res.status(500).send(err))
+}
+
+function deleteSauce(req, res) {
+  const { id } = req.params
+  Product.findByIdAndDelete(id)
+    .then((product) => sendCliResponse(product, res))
+    .then((item) => deleteImage(item))
+    .then((res) => console.log("FILE DELETED", res))
+    .catch((err) => res.status(500).send({ message: err }))
+}
+
+function modifySauce(req, res) {
+  const {
+    params: { id }
+  } = req
+
+  const hasNewImage = req.file != null
+  const payload = makePayload(hasNewImage, req)
+
+  Product.findByIdAndUpdate(id, payload)
+    .then((dbResponse) => sendCliResponse(dbResponse, res))
+    .then((product) => deleteImage(product))
+    .then((res) => console.log("FILE DELETED", res))
+    .catch((err) => console.error("PROBLEM UPDATING", err))
+}
+
+function deleteImage(product) {
+  if (product == null) return
+  console.log("DELETE IMAGE", product)
+  const imageToDelete = product.imageUrl.split("/").at(-1)
+  return unlink("images/" + imageToDelete)
+}
+
+function makePayload(hasNewImage, req) {
+  console.log("hasNewImage:", hasNewImage)
+  if (!hasNewImage) return req.body
+  const payload = JSON.parse(req.body.sauce)
+  payload.imageUrl = makeImageUrl(req, req.file.fileName)
+  console.log("NOUVELLE IMAGE A GERER")
+  console.log("voici le payload:", payload)
+  return payload
+}
+
+function sendCliResponse(product, res) {
+  if (product == null) {
+    console.log("NOTHING TO UPDATE")
+    return res.status(404).send({ message: "Object not found in database" })
+  }
+  console.log("ALL GOOD, UPDATING:", product)
+  return Promise.resolve(res.status(200).send(product)).then(() => product)
+}
+
+function makeImageUrl(req, fileName) {
+  return req.protocol + "://" + req.get("host") + "/images/" + fileName
+}
+function createSauce(req, res) {
+  const { body, file } = req
+  const { fileName } = file
+  const sauce = JSON.parse(body.sauce)
+  const { name, manufacturer, description, mainPepper, heat, userId } = sauce
+
+  const product = new Product({
+    userId: userId,
+    name: name,
+    manufacturer: manufacturer,
+    description: description,
+    mainPepper: mainPepper,
+    imageUrl: makeImageUrl(req, fileName),
+    heat: heat,
+    likes: 0,
+    dislikes: 0,
+    usersLiked: [],
+    usersDisliked: []
+  })
+  product
+    .save()
+    .then((message) => res.status(201).send({ message }))
+    .catch((err) => res.status(500).send(err))
+}
+function likeSauce(req,res){
+  const like=req.body.like
+  const userId=req.body.userId
+
+  getSauce(req,res)
+   .then((product)=>console.log("produit liké:",product))
+   .catch((err)=>res.status(500).send(console.log(err)))
+  
+  
+  }
+
+
+module.exports = {likeSauce,sendCliResponse,retrieveSauce,retrieveSauces, createSauce,retrieveSauceById, deleteSauce, modifySauce }
