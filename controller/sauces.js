@@ -106,21 +106,75 @@ function createSauce(req, res) {
     usersLiked: [],
     usersDisliked: []
   })
-  product
+   product
     .save()
     .then((message) => res.status(201).send({ message }))
     .catch((err) => res.status(500).send(err))
 }
+
 function likeSauce(req,res){
   const like=req.body.like
   const userId=req.body.userId
+  if(![-1,0,1].includes(like)) return res.status(403).send({message:"like invalid"})
 
-  getSauce(req,res)
-   .then((product)=>console.log("produit liké:",product))
+  retrieveSauce(req,res)
+   .then((product)=>addVote(product,like,userId,res) )
+   .then((pr) => pr.save())
+   .then(article=>sendCliResponse(article,res))
    .catch((err)=>res.status(500).send(console.log(err)))
-  
-  
   }
+
+  
+  function addVote(product,like,userId,res){
+    if(like===1 || like===-1)  return addlike(product,userId,like)
+    return resetLike(product,userId,res)
+   
+  
+}
+
+function resetLike(product,userId,res){
+  const usersLiked=product.usersLiked
+  const usersDisliked=product.usersDisliked
+
+  if ([usersLiked,usersDisliked].every(arr=>arr.includes(userId))) 
+  return Promise.reject("user voted both ways")
+
+  if ( ! [usersLiked,usersDisliked].some(arr=>arr.includes(userId))) 
+  return Promise.reject("user has not yet voted")
+
+  
+  
+
+
+ if(usersLiked.includes(userId)){
+  --product.likes
+product.usersLiked=product.usersLiked.filter(id=>id!==userId)
+ }
+ else{
+  --product.dislikes
+  product.usersDisliked=product.usersDisliked.filter(id=>id!==userId)
+ }
+  
+
+  return product
+}
+
+
+function addlike(product,userId,like) {
+const usersLiked=product.usersLiked
+const usersDisliked=product.usersDisliked
+const votersArray=like===1?  usersLiked:usersDisliked
+if(votersArray.includes(userId)) return product
+votersArray.push(userId)   
+
+like===1?++product.likes:++product.dislikes
+
+
+
+return product
+
+}
+
 
 
 module.exports = {likeSauce,sendCliResponse,retrieveSauce,retrieveSauces, createSauce,retrieveSauceById, deleteSauce, modifySauce }
